@@ -3,6 +3,8 @@ const { Router } = require('express')
 const { Business } = require('../models/business')
 const { Photo } = require('../models/photo')
 const { Review } = require('../models/review')
+const { ValidationError } = require("sequelize");
+const { User } = require("../models/user");
 
 const router = Router()
 
@@ -38,5 +40,26 @@ router.get('/:userId/photos', async function (req, res) {
     photos: userPhotos
   })
 })
+
+/*
+  * Route to create a new user.
+ */
+router.post('/', async function (req, res, next) {
+  try {
+    const user = await User.create(req.body)
+    res.status(201).json(user)
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      const messages = err.errors.map(e => e.message)
+      res.status(400).json(messages)
+    } else {
+      next(err)
+    }
+  }
+})
+
+/*
+
+ */
 
 module.exports = router
