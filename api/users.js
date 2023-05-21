@@ -30,8 +30,15 @@ router.get('/:userId/businesses', requireAuthentication, async function (req, re
 /*
  * Route to list all of a user's reviews.
  */
-router.get('/:userId/reviews', async function (req, res) {
+router.get('/:userId/reviews', requireAuthentication, async function (req, res) {
   const userId = req.params.userId
+  const jwt = req.jwt
+  if (!jwt.admin && Number(jwt.id) !== Number(userId)) {
+    res.status(403).json({
+      error: `User ${jwt.id} is not authorized to access user ${userId}'s reviews.`
+    })
+    return
+  }
   const userReviews = await Review.findAll({ where: { userId: userId }})
   res.status(200).json({
     reviews: userReviews
@@ -41,8 +48,15 @@ router.get('/:userId/reviews', async function (req, res) {
 /*
  * Route to list all of a user's photos.
  */
-router.get('/:userId/photos', async function (req, res) {
+router.get('/:userId/photos', requireAuthentication, async function (req, res) {
   const userId = req.params.userId
+  const jwt = req.jwt
+  if (!jwt.admin && Number(jwt.id) !== Number(userId)) {
+    res.status(403).json({
+      error: `User ${jwt.id} is not authorized to access user ${userId}'s photos.`
+    })
+    return
+  }
   const userPhotos = await Photo.findAll({ where: { userId: userId }})
   res.status(200).json({
     photos: userPhotos
