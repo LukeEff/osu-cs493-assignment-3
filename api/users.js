@@ -99,4 +99,24 @@ const { email, password } = req.body
   }
 });
 
+/*
+  * Route to fetch info about a specific user.
+ */
+router.get('/:userId', requireAuthentication, async function (req, res, next) {
+  const userId = req.params.userId
+  const jwt = req.jwt
+  if (!jwt.admin && Number(jwt.id) !== Number(userId)) {
+    res.status(403).json({
+      error: `User ${jwt.id} is not authorized to access user ${userId}.`
+    })
+    return
+  }
+  const user = await User.findByPk(userId)
+  if (user) {
+    res.status(200).json(user)
+  } else {
+    next()
+  }
+})
+
 module.exports = router
