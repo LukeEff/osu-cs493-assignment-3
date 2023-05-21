@@ -2,6 +2,7 @@ const { DataTypes } = require('sequelize');
 
 // hash function
 const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 
 const sequelize = require('../lib/sequelize');
 
@@ -17,6 +18,19 @@ const User = sequelize.define('user', {
   },
   admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
 })
+
+User.prototype.validPassword = function (password) {
+  return bcrypt.compareSync(password, this.password)
+}
+
+User.prototype.generateJWT = function () {
+  return jwt.sign({
+    id: this.id,
+    name: this.name,
+    email: this.email,
+    admin: this.admin
+  }, process.env.JWT_SECRET)
+}
 
 exports.User = User
 exports.UserClientFields = [

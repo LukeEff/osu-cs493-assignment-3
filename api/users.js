@@ -59,7 +59,22 @@ router.post('/', async function (req, res, next) {
 })
 
 /*
-
+  * Route to log in a user.
  */
+router.post('/login', async function (req, res, next) {
+const { email, password } = req.body
+  const user = await User.findOne({ where: { email: email }})
+  if (user) {
+    if (user.validPassword(password)) {
+      // Respond with a JWT token
+      const token = user.generateJWT()
+      res.status(200).json({ token: token })
+    } else {
+      res.status(401).json(['Invalid password'])
+    }
+  } else {
+    res.status(401).json(['Invalid email address'])
+  }
+});
 
 module.exports = router
