@@ -24,12 +24,18 @@ User.prototype.validPassword = function (password) {
 }
 
 User.prototype.generateJWT = function () {
+
+  // expires in 1 day
   return jwt.sign({
     id: this.id,
     name: this.name,
     email: this.email,
-    admin: this.admin
-  }, process.env.JWT_SECRET)
+    admin: this.admin,
+  }, process.env.JWT_SECRET, { expiresIn: '1d' })
+}
+
+User.prototype.authenticateJWT = function (token) {
+  return jwt.verify(token, process.env.JWT_SECRET)
 }
 
 exports.User = User
