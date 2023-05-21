@@ -4,6 +4,7 @@ const { ValidationError } = require('sequelize')
 const { Business, BusinessClientFields } = require('../models/business')
 const { Photo } = require('../models/photo')
 const { Review } = require('../models/review')
+const requireAuthentication = require('../lib/authenticate')
 
 const router = Router()
 
@@ -55,16 +56,23 @@ router.get('/', async function (req, res) {
 /*
  * Route to create a new business.
  */
-router.post('/', async function (req, res, next) {
-  try {
-    const business = await Business.create(req.body, BusinessClientFields)
-    res.status(201).send({ id: business.id })
-  } catch (e) {
-    if (e instanceof ValidationError) {
-      res.status(400).send({ error: e.message })
-    } else {
-      throw e
+router.post('/', requireAuthentication, async function (req, res, next) {
+  // OwnerId must be the same as the authenticated user or the authenticated user must be an admin
+  if (req.jwt.admin || Number(req.jwt.id) === Number(req.body.ownerId)) {
+    try {
+      const business = await Business.create(req.body, BusinessClientFields)
+      res.status(201).send({id: business.id})
+    } catch (e) {
+      if (e instanceof ValidationError) {
+        res.status(400).send({error: e.message})
+      } else {
+        throw e
+      }
     }
+  } else {
+    res.status(403).send({
+      error: `User ${req.jwt.id} is not authorized to create a business owned by ${req.body.ownerId}.`
+    })
   }
 })
 
