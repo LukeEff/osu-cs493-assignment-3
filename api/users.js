@@ -6,6 +6,7 @@ const { Review } = require('../models/review')
 const { ValidationError } = require("sequelize");
 const { User } = require("../models/user");
 const requireAuthentication = require("../lib/authenticate");
+const jsonwebtoken = require("jsonwebtoken");
 
 const router = Router()
 
@@ -67,6 +68,12 @@ router.get('/:userId/photos', requireAuthentication, async function (req, res) {
   * Route to create a new user.
  */
 router.post('/', async function (req, res, next) {
+  if (!isAdmin(req) && req.body.admin) {
+    res.status(403).json({
+      error: `Only admins can create admin users.`
+    })
+    return
+  }
   try {
     const user = await User.create(req.body)
     res.status(201).json(user)
@@ -118,5 +125,24 @@ router.get('/:userId', requireAuthentication, async function (req, res, next) {
     next()
   }
 })
+
+function isAuthorized(req) {
+  const authHeader = req.headers.authorization
+  const jwt = authHeader && authHeader.split(' ')[1]
+  if (!jwt) {
+    return false
+  }
+  try {
+    req.jwt = jsonwebtoken.verify(jwt, process.env.JWT_SECRET)
+    return true
+  }
+  catch (e) {
+    return false
+  }
+}
+
+function isAdmin(req) {
+  return isAuthorized(req) && req.jwt.admin
+}
 
 module.exports = router

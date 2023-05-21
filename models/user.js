@@ -32,10 +32,6 @@ User.prototype.generateJWT = function () {
   }, process.env.JWT_SECRET, { expiresIn: '1d' })
 }
 
-User.prototype.authenticateJWT = function (token) {
-  return jwt.verify(token, process.env.JWT_SECRET)
-}
-
 exports.User = User
 exports.UserClientFields = [
   'name',
