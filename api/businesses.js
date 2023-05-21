@@ -133,7 +133,7 @@ function ownsBusiness (req, res, next) {
     return next()
   }
   Business.findByPk(businessId).then(business => {
-    if (business.ownerId === req.jwt.id || req.jwt.admin) {
+    if (business.ownerId === req.jwt.id) {
       next()
     } else {
       res.status(403).send({

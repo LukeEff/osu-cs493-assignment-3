@@ -1,5 +1,6 @@
 const { Router } = require('express')
 const { ValidationError } = require('sequelize')
+const requireAuthentication = require('../lib/authenticate')
 
 const { Review, ReviewClientFields } = require('../models/review')
 
@@ -8,7 +9,7 @@ const router = Router()
 /*
  * Route to create a new review.
  */
-router.post('/', async function (req, res, next) {
+router.post('/', requireAuthentication, async function (req, res, next) {
   try {
     const review = await Review.create(req.body, ReviewClientFields)
     res.status(201).send({ id: review.id })
@@ -37,7 +38,7 @@ router.get('/:reviewId', async function (req, res, next) {
 /*
  * Route to update a review.
  */
-router.patch('/:reviewId', async function (req, res, next) {
+router.patch('/:reviewId', requireAuthentication, ownsReview, async function (req, res, next) {
   const reviewId = req.params.reviewId
 
   /*
@@ -59,7 +60,7 @@ router.patch('/:reviewId', async function (req, res, next) {
 /*
  * Route to delete a review.
  */
-router.delete('/:reviewId', async function (req, res, next) {
+router.delete('/:reviewId', requireAuthentication, ownsReview, async function (req, res, next) {
   const reviewId = req.params.reviewId
   const result = await Review.destroy({ where: { id: reviewId }})
   if (result > 0) {
@@ -68,5 +69,23 @@ router.delete('/:reviewId', async function (req, res, next) {
     next()
   }
 })
+
+function ownsReview (req, res, next) {
+  const reviewId = req.params.reviewId
+  const jwt = req.jwt
+  if (jwt.admin) {
+    next()
+    return
+  }
+  Review.findByPk(reviewId).then(review => {
+    if (review.userId === Number(jwt.id)) {
+      next()
+    } else {
+      res.status(403).json({
+        error: `User ${jwt.id} is not authorized to access review ${reviewId}.`
+      })
+    }
+  })
+}
 
 module.exports = router
