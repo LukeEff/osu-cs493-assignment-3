@@ -94,7 +94,7 @@ router.get('/:businessId', async function (req, res, next) {
 /*
  * Route to update data for a business.
  */
-router.patch('/:businessId', async function (req, res, next) {
+router.patch('/:businessId', requireAuthentication, ownsBusiness, async function (req, res, next) {
   const businessId = req.params.businessId
   const result = await Business.update(req.body, {
     where: { id: businessId },
@@ -110,7 +110,7 @@ router.patch('/:businessId', async function (req, res, next) {
 /*
  * Route to delete a business.
  */
-router.delete('/:businessId', async function (req, res, next) {
+router.delete('/:businessId', requireAuthentication, ownsBusiness, async function (req, res, next) {
   const businessId = req.params.businessId
   const result = await Business.destroy({ where: { id: businessId }})
   if (result > 0) {
@@ -119,5 +119,28 @@ router.delete('/:businessId', async function (req, res, next) {
     next()
   }
 })
+
+function ownsBusiness (req, res, next) {
+  // The business corresponding to the businessId must be owned by the authenticated user or the authenticated user must be an admin
+  const businessId = req.params.businessId
+  if (!businessId) {
+    res.status(400).send({
+      error: 'Business ID is required.'
+    })
+    return
+  }
+  if (req.jwt.admin) {
+    next()
+  }
+  Business.findByPk(businessId).then(business => {
+    if (business.ownerId === req.jwt.id || req.jwt.admin) {
+      next()
+    } else {
+      res.status(403).send({
+        error: `User ${req.jwt.id} is not authorized to modify the business ${businessId}.`
+      })
+    }
+  })
+}
 
 module.exports = router
