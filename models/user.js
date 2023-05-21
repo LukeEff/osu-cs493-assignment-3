@@ -24,8 +24,6 @@ User.prototype.validPassword = function (password) {
 }
 
 User.prototype.generateJWT = function () {
-
-  // expires in 1 day
   return jwt.sign({
     id: this.id,
     name: this.name,

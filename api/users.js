@@ -5,14 +5,22 @@ const { Photo } = require('../models/photo')
 const { Review } = require('../models/review')
 const { ValidationError } = require("sequelize");
 const { User } = require("../models/user");
+const requireAuthentication = require("../lib/authenticate");
 
 const router = Router()
 
 /*
  * Route to list all of a user's businesses.
  */
-router.get('/:userId/businesses', async function (req, res) {
+router.get('/:userId/businesses', requireAuthentication, async function (req, res) {
+  const jwt = req.jwt
   const userId = req.params.userId
+  if (!jwt.admin && Number(jwt.id) !== Number(userId)) {
+    res.status(403).json({
+      error: `User ${jwt.id} is not authorized to access user ${userId}'s businesses.`
+    })
+    return
+  }
   const userBusinesses = await Business.findAll({ where: { ownerId: userId }})
   res.status(200).json({
     businesses: userBusinesses
