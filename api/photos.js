@@ -1,5 +1,6 @@
 const { Router } = require('express')
 const { ValidationError } = require('sequelize')
+const requireAuthentication = require('../lib/authenticate')
 
 const { Photo, PhotoClientFields } = require('../models/photo')
 
@@ -8,7 +9,14 @@ const router = Router()
 /*
  * Route to create a new photo.
  */
-router.post('/', async function (req, res, next) {
+router.post('/', requireAuthentication, async function (req, res, next) {
+  const jwt = req.jwt
+  if (!jwt.admin && Number(jwt.id) !== Number(req.body.userId)) {
+    res.status(403).json({
+      error: `User ${jwt.id} is not authorized to create a photo for user ${req.body.userId}.`
+    })
+    return
+  }
   try {
     const photo = await Photo.create(req.body, PhotoClientFields)
     res.status(201).send({ id: photo.id })
@@ -37,7 +45,7 @@ router.get('/:photoId', async function (req, res, next) {
 /*
  * Route to update a photo.
  */
-router.patch('/:photoId', async function (req, res, next) {
+router.patch('/:photoId', requireAuthentication, ownsPhoto, async function (req, res, next) {
   const photoId = req.params.photoId
 
   /*
@@ -59,7 +67,7 @@ router.patch('/:photoId', async function (req, res, next) {
 /*
  * Route to delete a photo.
  */
-router.delete('/:photoId', async function (req, res, next) {
+router.delete('/:photoId', requireAuthentication, ownsPhoto, async function (req, res, next) {
   const photoId = req.params.photoId
   const result = await Photo.destroy({ where: { id: photoId }})
   if (result > 0) {
@@ -68,5 +76,21 @@ router.delete('/:photoId', async function (req, res, next) {
     next()
   }
 })
+
+function ownsPhoto (req, res, next) {
+  const photoId = req.params.photoId
+  if (req.jwt.admin) {
+    return next()
+  }
+  Photo.findByPk(photoId).then(photo => {
+    if (photo.userId === req.jwt.id) {
+      next()
+    } else {
+      res.status(403).send({
+        error: `User ${req.jwt.id} is not authorized to update photo ${photoId}.`
+      })
+    }
+  })
+}
 
 module.exports = router
